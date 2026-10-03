@@ -1,0 +1,76 @@
+name: mindvault
+
+networks:
+  mindvault-network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+  qdrant_data:
+
+services:
+  # ── Vector store ──────────────────────────────────────────────────────────
+  # Host ports are shifted off the defaults (6333/6334) so this stack can run
+  # alongside the other projects in this folder, which also ship a Qdrant.
+  # Inside the compose network the service is reached as http://qdrant:6333 —
+  # the INTERNAL port, not the mapped one. n8n nodes must use that URL.
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    container_name: mindvault-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_HOST_PORT:-6353}:6333"   # REST  (host tools, the MCP server)
+      - "${QDRANT_GRPC_PORT:-6354}:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      # Qdrant's image is distroless-ish: no curl/wget. Its own binary can
+      # answer a readiness probe, which is the supported check.
+      test: ["CMD-SHELL", "./qdrant --version || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - mindvault-network
+
+  # ── Automation engine ─────────────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:2.42.2
+    container_name: mindvault-n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_HOST_PORT:-5678}:5678"
+    environment:
+      # Credentials are encrypted at rest with this key. If it changes, every
+      # stored credential becomes undecryptable — keep it stable and out of git.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env}
+
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      # Webhook URLs are built from this; without it n8n advertises the
+      # container's internal address and external calls miss.
+      WEBHOOK_URL: http://localhost:${N8N_HOST_PORT:-5678}/
+
+      # Served over plain http locally, so the secure-cookie flag must be off
+      # or the editor refuses to keep you logged in.
+      N8N_SECURE_COOKIE: "false"
+      # Opt in explicitly: silences the deprecation notice and matches the
+      # execution model n8n is standardising on.
+      N8N_RUNNERS_ENABLED: "true"
+      # The Code node sandbox blocks Node builtins unless allow-listed.
+      # "Preparar texto" needs crypto for its deterministic point ids.
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Sao_Paulo}
+      TZ: ${GENERIC_TIMEZONE:-America/Sao_Paulo}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Read-only so the container can import them but never rewrite them:
+      # the files in git stay the source of truth, not n8n's database.
+      - ./workflows:/workflows:ro
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - mindvault-network

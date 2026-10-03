@@ -1,0 +1,33 @@
+# ─── Secrets / machine-specific ───
+.env
+!.env.example
+# Holds an absolute path to this checkout; the .example is the shared one.
+.mcp.json
+!.mcp.json.example
+
+# ─── Python ───
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ─── Local data ───
+# Docker volumes are named, not bind-mounted, but keep these out if that changes.
+n8n_data/
+qdrant_data/
+
+# ─── Reference material (kept local, not published) ───
+reference/
+
+# ─── OS / editor ───
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
