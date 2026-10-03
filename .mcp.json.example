@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "Copy to .mcp.json and replace ABSOLUTE_PATH_TO_THIS_REPO with the real path.",
+    "The path is absolute on purpose: the MCP host spawns this process itself, and",
+    "its working directory is not guaranteed to be the project root. .mcp.json is",
+    "gitignored for the same reason .env is — it is machine-specific."
+  ],
+  "mcpServers": {
+    "mindvault": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "ABSOLUTE_PATH_TO_THIS_REPO",
+        "run",
+        "python",
+        "-m",
+        "mindvault.server"
+      ]
+    }
+  }
+}
