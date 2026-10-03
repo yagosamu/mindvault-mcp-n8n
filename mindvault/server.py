@@ -55,7 +55,11 @@ def _ctx(ctx: Context[VaultContext]) -> VaultContext:
 
 
 def _format(note: store.Note) -> str:
-    head = f"# {note.title}\n_{note.path}_"
+    # Surfacing the kind matters once clips outnumber written notes: the reader
+    # needs to see at a glance whether a passage is the author's own conclusion
+    # or something they merely saved.
+    marca = f" · {note.tipo}" if note.tipo else ""
+    head = f"# {note.title}\n_{note.path}_{marca}"
     if note.score is not None:
         head += f" · similarity {note.score:.3f}"
     return f"{head}\n\n{note.text}"
@@ -67,6 +71,7 @@ async def search_notes(
     ctx: Context[VaultContext],
     limit: int = 5,
     min_score: float = 0.3,
+    tipo: str | None = None,
 ) -> str:
     """Search the vault by meaning and return the matching notes.
 
@@ -79,6 +84,11 @@ async def search_notes(
         limit: How many notes to return at most.
         min_score: Cosine similarity floor, 0 to 1. Raise it to cut weak matches;
             lower it when a search that should have hit comes back empty.
+        tipo: Restrict to one kind of note. Pass "referencia" for conclusions the
+            author wrote and reasoned through, "clip" for material saved from the
+            web, "reuniao" for a distilled meeting transcript. Use "referencia"
+            when the question asks what the author thinks or decided, and leave
+            it unset when any source will do.
 
     Returns:
         The matching notes with their vault paths and similarity scores, or a
@@ -87,15 +97,16 @@ async def search_notes(
     vault = _ctx(ctx)
     try:
         vector = await store.embed(vault.client, vault.settings, query)
-        notes = await store.search(vault.client, vault.settings, vector, limit, min_score)
+        notes = await store.search(vault.client, vault.settings, vector, limit, min_score, tipo)
     except store.VaultError as exc:
         raise ToolError(str(exc)) from exc
 
     if not notes:
         # Saying so explicitly beats returning nothing: it tells the model the
         # vault was consulted and came up empty, which is itself an answer.
+        restricao = f" among notes of type {tipo!r}" if tipo else ""
         return (
-            f"No note in the vault scored above {min_score} for {query!r}. "
+            f"No note in the vault{restricao} scored above {min_score} for {query!r}. "
             "Either it was never captured, or the threshold is too strict."
         )
     return "\n\n---\n\n".join(_format(n) for n in notes)
@@ -132,6 +143,7 @@ async def list_notes(
     ctx: Context[VaultContext],
     folder: str | None = None,
     limit: int = 100,
+    tipo: str | None = None,
 ) -> str:
     """List the notes in the vault, optionally within one PARA folder.
 
@@ -142,13 +154,14 @@ async def list_notes(
     Args:
         folder: Restrict to one PARA folder, written exactly as above.
         limit: Maximum number of notes to scan.
+        tipo: Restrict to one kind of note: "referencia", "clip" or "reuniao".
 
     Returns:
         One line per note: its path and title.
     """
     vault = _ctx(ctx)
     try:
-        notes = await store.list_paths(vault.client, vault.settings, folder, limit)
+        notes = await store.list_paths(vault.client, vault.settings, folder, limit, tipo)
     except store.VaultError as exc:
         raise ToolError(str(exc)) from exc
 

@@ -26,6 +26,7 @@ class Note:
     path: str
     title: str
     text: str
+    tipo: str = ""
     score: float | None = None
 
     @property
@@ -40,6 +41,7 @@ class Note:
             path=payload.get("path", ""),
             title=payload.get("titulo", ""),  # the indexer writes Portuguese keys
             text=payload.get("texto", ""),
+            tipo=payload.get("tipo", ""),
             score=point.get("score"),
         )
 
@@ -71,6 +73,7 @@ async def search(
     vector: list[float],
     limit: int = 5,
     min_score: float = 0.0,
+    tipo: str | None = None,
 ) -> list[Note]:
     """Nearest notes to `vector`, dropping anything below `min_score`.
 
@@ -81,6 +84,11 @@ async def search(
     body: dict = {"vector": vector, "limit": limit, "with_payload": True}
     if min_score > 0:
         body["score_threshold"] = min_score
+    if tipo:
+        # Filtering in Qdrant rather than after the fact: dropping rows here would
+        # silently return fewer than `limit`, because the search already spent its
+        # budget on the kinds the caller did not want.
+        body["filter"] = {"must": [{"key": "tipo", "match": {"value": tipo}}]}
 
     response = await client.post(settings.search_url, headers=_qdrant_headers(settings), json=body)
     if response.status_code != 200:
@@ -110,7 +118,11 @@ async def get_by_path(
 
 
 async def list_paths(
-    client: httpx.AsyncClient, settings: Settings, folder: str | None = None, limit: int = 100
+    client: httpx.AsyncClient,
+    settings: Settings,
+    folder: str | None = None,
+    limit: int = 100,
+    tipo: str | None = None,
 ) -> list[Note]:
     """Every indexed note, optionally restricted to one PARA folder.
 
@@ -120,7 +132,12 @@ async def list_paths(
     response = await client.post(
         settings.scroll_url,
         headers=_qdrant_headers(settings),
-        json={"limit": limit, "with_payload": True, "with_vector": False},
+        json={
+            "limit": limit,
+            "with_payload": True,
+            "with_vector": False,
+            **({"filter": {"must": [{"key": "tipo", "match": {"value": tipo}}]}} if tipo else {}),
+        },
     )
     if response.status_code != 200:
         raise VaultError(f"Qdrant scroll failed ({response.status_code}): {response.text[:200]}")

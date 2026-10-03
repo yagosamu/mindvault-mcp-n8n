@@ -68,7 +68,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -100,7 +103,10 @@
         672,
         304
       ],
-      "notes": "RETRIEVAL: busca as 3 notas mais próximas no Qdrant, com payload (título, caminho, texto)."
+      "notes": "RETRIEVAL: busca as 3 notas mais próximas no Qdrant, com payload (título, caminho, texto).",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -141,7 +147,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {

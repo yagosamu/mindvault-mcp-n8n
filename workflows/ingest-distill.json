@@ -68,7 +68,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -95,7 +98,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -122,7 +128,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -149,7 +158,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -207,7 +219,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -261,7 +276,10 @@
           "id": "6ENvYhUt2ydORGeK",
           "name": "GitHub account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -298,7 +316,10 @@
           "id": "6ENvYhUt2ydORGeK",
           "name": "GitHub account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -352,7 +373,10 @@
           "id": "6ENvYhUt2ydORGeK",
           "name": "GitHub account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     },
     {
       "parameters": {
@@ -378,7 +402,10 @@
           "id": "vorbqKL1lyqMm4vO",
           "name": "OpenAI account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     }
   ],
   "pinData": {},

@@ -155,3 +155,40 @@ async def test_qdrant_api_key_header_only_when_set(monkeypatch: pytest.MonkeyPat
     async with httpx.AsyncClient() as client:
         await store.search(client, get_settings(), FAKE_VECTOR)
     assert respx.calls.last.request.headers["api-key"] == "secret"
+
+
+@respx.mock
+async def test_search_filters_by_tipo_server_side(settings: Settings) -> None:
+    route = respx.post(SEARCH_URL).mock(return_value=httpx.Response(200, json={"result": []}))
+    async with httpx.AsyncClient() as client:
+        await store.search(client, settings, FAKE_VECTOR, tipo="referencia")
+
+    import json
+
+    sent = json.loads(route.calls.last.request.content)
+    # Filtering must reach Qdrant, not happen afterwards: dropping rows locally
+    # would return fewer than `limit`, since the search already spent its budget.
+    assert sent["filter"] == {"must": [{"key": "tipo", "match": {"value": "referencia"}}]}
+
+
+@respx.mock
+async def test_search_omits_filter_when_tipo_is_none(settings: Settings) -> None:
+    route = respx.post(SEARCH_URL).mock(return_value=httpx.Response(200, json={"result": []}))
+    async with httpx.AsyncClient() as client:
+        await store.search(client, settings, FAKE_VECTOR)
+
+    import json
+
+    assert "filter" not in json.loads(route.calls.last.request.content)
+
+
+@respx.mock
+async def test_note_carries_tipo_from_payload(settings: Settings) -> None:
+    respx.post(SEARCH_URL).mock(
+        return_value=httpx.Response(
+            200, json={"result": [point("03 - Recursos/x.md", "X", "y", 0.5, tipo="clip")]}
+        )
+    )
+    async with httpx.AsyncClient() as client:
+        [note] = await store.search(client, settings, FAKE_VECTOR)
+    assert note.tipo == "clip"

@@ -50,9 +50,14 @@ def test_settings(monkeypatch: pytest.MonkeyPatch):
     get_settings.cache_clear()
 
 
-def point(path: str, titulo: str, texto: str, score: float | None = None) -> dict:
+def point(
+    path: str, titulo: str, texto: str, score: float | None = None, tipo: str = "referencia"
+) -> dict:
     """A Qdrant point shaped the way the n8n indexer writes it."""
-    p: dict = {"id": "abc", "payload": {"path": path, "titulo": titulo, "texto": texto}}
+    p: dict = {
+        "id": "abc",
+        "payload": {"path": path, "titulo": titulo, "texto": texto, "tipo": tipo},
+    }
     if score is not None:
         p["score"] = score
     return p

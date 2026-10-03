@@ -153,3 +153,37 @@ async def test_embedding_failure_surfaces_as_a_tool_error(client: Client) -> Non
 
     assert result.is_error is True
     assert "429" in text_of(result)
+
+
+@respx.mock
+async def test_search_notes_passes_tipo_to_qdrant(client: Client) -> None:
+    _embed_ok()
+    route = respx.post(SEARCH_URL).mock(return_value=httpx.Response(200, json={"result": []}))
+
+    await client.call_tool("search_notes", {"query": "x", "tipo": "referencia"})
+
+    import json
+
+    sent = json.loads(route.calls.last.request.content)
+    assert sent["filter"]["must"][0]["match"]["value"] == "referencia"
+
+
+@respx.mock
+async def test_empty_result_names_the_restriction(client: Client) -> None:
+    _embed_ok()
+    respx.post(SEARCH_URL).mock(return_value=httpx.Response(200, json={"result": []}))
+
+    out = text_of(await client.call_tool("search_notes", {"query": "x", "tipo": "clip"}))
+
+    # Saying which slice was searched stops the model from concluding the vault
+    # is empty when only one kind of note was consulted.
+    assert "type 'clip'" in out
+
+
+@respx.mock
+async def test_hits_show_the_kind_of_note(client: Client) -> None:
+    _embed_ok()
+    respx.post(SEARCH_URL).mock(return_value=httpx.Response(200, json={"result": [KICKOFF]}))
+
+    out = text_of(await client.call_tool("search_notes", {"query": "x"}))
+    assert "· referencia" in out
