@@ -1,0 +1,579 @@
+{
+  "name": "mindvault-ingest-distill",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Início (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        464
+      ],
+      "notes": "Estágio 1 — porta de entrada. Na aula: manual. Em produção: trocar por Webhook."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "transcricao",
+              "type": "string",
+              "value": "Essa é a nossa conversa de sempre sobre as finanças da empresa. Não tem data pra acabar, é o acompanhamento mensal mesmo. Todo início de mês eu concilio as entradas das plataformas com o extrato, confiro os assinantes ativos e os cancelamentos. A gente mantém a planilha de fluxo de caixa atualizada e revisa as despesas fixas. Fica combinado que isso é responsabilidade contínua minha, todo mês. Não é um projeto, é uma rotina que precisa rodar sempre pra empresa ficar saudável. Esse mês as receitas de assinatura subiram um pouco e os custos com ferramentas ficaram estáveis."
+            },
+            {
+              "id": "a2",
+              "name": "data",
+              "type": "string",
+              "value": "={{ $now.format('yyyy-MM-dd') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prep",
+      "name": "Preparar fonte",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        464
+      ],
+      "notes": "Estágio 1 — normaliza a fonte em dois campos: transcricao e data."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: `Você é o Sumarizador de uma equipe que destila transcrições. Escreva em português. Leia a transcrição do usuário e extraia apenas o que está nela. Retorne um JSON com as chaves: titulo (string curta e específica), resumo_uma_linha (string), participantes (array de nomes reais que aparecem falando; normalize apelidos como chefe ou chef para o nome real quando ele aparecer na conversa, e não inclua apelidos genéricos se o nome real não aparecer; vazio se não houver) e pontos_chave (array com no máximo 5 itens). Não invente nada; se não houver pontos-chave, use array vazio.` }, { role: 'user', content: $json.transcricao } ] }) }}",
+        "options": {}
+      },
+      "id": "ag_sum",
+      "name": "Sumarizador",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        128
+      ],
+      "notes": "Estágio 2 — especialista: título, resumo, participantes, pontos-chave. JSON.",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: `Você é o Caçador de Action Items. Escreva em português. Encontre na transcrição as tarefas concretas combinadas. Retorne um JSON com a chave action_items (array de objetos com as chaves tarefa e responsavel). Use responsavel igual a null quando não for dito. Só tarefas realmente ditas; se não houver, use array vazio.` }, { role: 'user', content: $json.transcricao } ] }) }}",
+        "options": {}
+      },
+      "id": "ag_act",
+      "name": "Caçador de Action Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        352
+      ],
+      "notes": "Estágio 2 — especialista: tarefas e responsáveis. JSON.",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: `Você é o Rastreador de Decisões. Escreva em português. Liste as decisões explícitas tomadas na transcrição. Retorne um JSON com a chave decisoes (array de strings). Decisão é algo definido ou combinado, não um assunto discutido; não confunda ponto-chave com decisão. Se não houver, use array vazio.` }, { role: 'user', content: $json.transcricao } ] }) }}",
+        "options": {}
+      },
+      "id": "ag_dec",
+      "name": "Rastreador de Decisões",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        560
+      ],
+      "notes": "Estágio 2 — especialista: decisões. JSON.",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.2, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: `Você é o Bibliotecário. Escreva em português. A partir da transcrição, sugira tags e links internos. Retorne um JSON com as chaves tags_sugeridas (array, máximo 5) e links_sugeridos (array apenas de projetos ou conceitos citados com clareza; não inclua nomes de pessoas nem ferramentas mencionadas de passagem). São sugestões; nunca invente conexão; na dúvida use arrays vazios.` }, { role: 'user', content: $json.transcricao } ] }) }}",
+        "options": {}
+      },
+      "id": "ag_lib",
+      "name": "Bibliotecário",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        784
+      ],
+      "notes": "Estágio 2 — especialista: sugere tags e links (nunca inventa). JSON.",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      },
+      "id": "merge",
+      "name": "Juntar agentes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        768,
+        448
+      ],
+      "notes": "Fan-in — espera os 4 agentes antes do Editor."
+    },
+    {
+      "parameters": {
+        "jsCode": "const g = (name) => { try { return $(name).item.json.choices[0].message.content; } catch (e) { return ''; } };\nconst data = $('Preparar fonte').item.json.data;\nconst transcricao = $('Preparar fonte').item.json.transcricao;\nconst system = `Você é o Editor-Chefe. Recebe a saída de quatro especialistas (em JSON) e a transcrição original, e monta a nota final em Markdown. Você não reinterpreta a fonte, apenas organiza o que os especialistas entregaram. Escreva em português. Monte a nota exatamente neste formato:\n---\ntipo: reuniao\ndata: [DATA]\nparticipantes: [participantes do Sumarizador]\ntags: [reuniao, mais as tags_sugeridas]\nstatus: destilada\n---\n\n# 🎙️ [titulo]\n\n> [!info] Resumo em 1 linha\n> [resumo_uma_linha]\n\n## ✅ Action items\n- [ ] [tarefa] — [responsavel] (quando responsavel for null, termine a linha logo após a tarefa, sem escrever o traço nem espaço)\n\n## 🧭 Decisões tomadas\n- [cada decisão]\n\n## 🔑 Pontos-chave (3 a 5)\n- [cada ponto_chave]\n\n## 🔗 Relacionado\n- [cada link como wikilink entre colchetes duplos]\n\n---\n\n> [!note]- 📄 Transcript bruto — clique para expandir\n> [a transcrição inteira]\n\nRegras: se uma lista vier vazia, escreva - (nada registrado); não crie itens que não vieram dos especialistas; preserve a transcrição inteira; devolva somente a nota.`;\nconst user = `DATA: ${data}\n\nSUMARIZADOR: ${g('Sumarizador')}\n\nACTION ITEMS: ${g('Caçador de Action Items')}\n\nDECISOES: ${g('Rastreador de Decisões')}\n\nBIBLIOTECARIO: ${g('Bibliotecário')}\n\nTRANSCRICAO:\n${transcricao}`;\nreturn [{ json: { system, user } }];"
+      },
+      "id": "montar",
+      "name": "Montar contexto do Editor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        480
+      ],
+      "notes": "Fan-in — lê os 4 JSONs (choices[0].message.content) e monta system+user do Editor."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.3, messages: [ { role: 'system', content: $json.system }, { role: 'user', content: $json.user } ] }) }}",
+        "options": {}
+      },
+      "id": "editor",
+      "name": "Editor-Chefe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        480
+      ],
+      "notes": "Fim do Estágio 2 — monta a nota final. Saída em choices[0].message.content.",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const md = $('Editor-Chefe').item.json.choices[0].message.content;\nconst permitidas = ['00 - Caixa de Entrada','01 - Projetos','02 - Áreas','03 - Recursos','04 - Arquivos'];\nlet folder = ($json.choices && $json.choices[0] && $json.choices[0].message ? $json.choices[0].message.content : '').trim();\nfolder = folder.replace(/^[\"'\\s]+|[\"'.\\s]+$/g, '').trim();\nif (!permitidas.includes(folder)) { folder = '00 - Caixa de Entrada'; }\nconst m = md.match(/^#\\s+(.+)$/m);\nlet titulo = (m ? m[1] : 'nota').replace(/[^\\p{L}\\p{N} \\-]/gu, '').trim();\nconst slug = titulo.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'nota';\nconst data = $('Preparar fonte').item.json.data;\nconst filename = `${data} - ${slug}.md`;\nlet conteudo = md;\nif (!/\\norigem:/.test(conteudo)) { conteudo = conteudo.replace('status: destilada', 'status: destilada\\norigem: workshop-second-brain'); }\nconst contentB64 = Buffer.from(conteudo, 'utf8').toString('base64');\nconst owner = 'yagosamu';\nconst repo = 'second-brain-vault';\nconst path = `${folder}/${filename}`;\nconst pathUrl = path.split('/').map(encodeURIComponent).join('/');\nreturn [{ json: { owner, repo, path, pathUrl, filename, folder, contentB64, commitMessage: `nota: ${titulo}` } }];"
+      },
+      "id": "a9c9148c-a388-4a9d-8987-d5453e87ba3a",
+      "name": "Preparar arquivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        480
+      ],
+      "notes": "Fase 4 — extrai título, monta nome/pasta do arquivo, carimba origem no frontmatter e codifica em base64. AJUSTAR owner/repo/folder conforme o vault-repo."
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $json.owner }}/{{ $json.repo }}/contents/{{ $json.pathUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $json.commitMessage, content: $json.contentB64 }) }}",
+        "options": {}
+      },
+      "id": "ab196409-da55-4f23-82a6-d5f4f28a7584",
+      "name": "Gravar no GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        480
+      ],
+      "notes": "Fase 4 — grava o .md no repositório (a ponte). O Obsidian com o plugin Git puxa e a nota aparece no vault.",
+      "credentials": {
+        "githubApi": {
+          "id": "6ENvYhUt2ydORGeK",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $('Preparar arquivo').item.json.owner }}/{{ $('Preparar arquivo').item.json.repo }}/contents/log.md",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4b1a3cdf-1ac1-4ae7-a22c-69cfa12b4710",
+      "name": "Ler log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2080,
+        480
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Fase 4 (log) — lê o log.md atual para pegar o sha. onError continue: se não existir (404), segue e cria do zero.",
+      "credentials": {
+        "githubApi": {
+          "id": "6ENvYhUt2ydORGeK",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let sha = undefined;\nlet existing = '';\ntry {\n  const r = $('Ler log').item.json;\n  if (r && typeof r.content === 'string') { existing = Buffer.from(r.content, 'base64').toString('utf8'); sha = r.sha; }\n} catch (e) {}\nconst data = $('Preparar fonte').item.json.data;\nconst titulo = String($('Preparar arquivo').item.json.commitMessage || '').replace(/^nota:\\s*/, '');\nconst linha = `## [${data}] ingest | ${titulo} — via workshop-second-brain`;\nconst header = '# 📜 log.md — Second Brain\\n\\nRegistro append-only das notas ingeridas.\\n\\n---\\n';\nconst base = (existing && existing.trim().length) ? existing.replace(/\\s*$/, '') : header;\nconst novo = base + '\\n' + linha + '\\n';\nconst contentB64 = Buffer.from(novo, 'utf8').toString('base64');\nconst owner = $('Preparar arquivo').item.json.owner;\nconst repo = $('Preparar arquivo').item.json.repo;\nconst out = { owner, repo, contentB64, message: `log: ${titulo}` };\nif (sha) { out.sha = sha; }\nreturn [{ json: out }];"
+      },
+      "id": "01862db6-28b1-44cf-a89a-6290e9f763da",
+      "name": "Montar log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        480
+      ],
+      "notes": "Fase 4 (log) — decodifica o log atual (se houver), anexa a linha da nova nota e recodifica. Passa o sha adiante quando o arquivo já existe."
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $json.owner }}/{{ $json.repo }}/contents/log.md",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.sha ? { message: $json.message, content: $json.contentB64, sha: $json.sha } : { message: $json.message, content: $json.contentB64 }) }}",
+        "options": {}
+      },
+      "id": "6a667c21-2c8e-4a8c-8843-64c2b90d0e0a",
+      "name": "Gravar log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2528,
+        480
+      ],
+      "notes": "Fase 4 (log) — regrava o log.md (com sha se atualizando, sem sha se criando).",
+      "credentials": {
+        "githubApi": {
+          "id": "6ENvYhUt2ydORGeK",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0, messages: [ { role: 'system', content: 'Voce classifica uma nota no metodo PARA. Responda APENAS com o nome exato de UMA pasta, sem aspas e sem explicacao. Opcoes validas, exatamente assim: 00 - Caixa de Entrada | 01 - Projetos | 02 - Áreas | 03 - Recursos | 04 - Arquivos. Regras: 01 Projetos = esforco com objetivo e fim definido, por exemplo um workshop ou um lancamento. 02 Áreas = responsabilidade continua sem fim, por exemplo trabalho, saude, financas. 03 Recursos = tema ou interesse de referencia, por exemplo n8n, RAG, um conceito. 04 Arquivos = concluido ou inativo. Na duvida responda 00 - Caixa de Entrada.' }, { role: 'user', content: 'NOTA:\\n' + $json.choices[0].message.content } ] }) }}",
+        "options": {}
+      },
+      "id": "classificar",
+      "name": "Classificar pasta (PARA)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1392,
+        480
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Início (manual)": {
+      "main": [
+        [
+          {
+            "node": "Preparar fonte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar fonte": {
+      "main": [
+        [
+          {
+            "node": "Sumarizador",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Caçador de Action Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rastreador de Decisões",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bibliotecário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sumarizador": {
+      "main": [
+        [
+          {
+            "node": "Juntar agentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Caçador de Action Items": {
+      "main": [
+        [
+          {
+            "node": "Juntar agentes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Rastreador de Decisões": {
+      "main": [
+        [
+          {
+            "node": "Juntar agentes",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Bibliotecário": {
+      "main": [
+        [
+          {
+            "node": "Juntar agentes",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Juntar agentes": {
+      "main": [
+        [
+          {
+            "node": "Montar contexto do Editor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar contexto do Editor": {
+      "main": [
+        [
+          {
+            "node": "Editor-Chefe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar arquivo": {
+      "main": [
+        [
+          {
+            "node": "Gravar no GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gravar no GitHub": {
+      "main": [
+        [
+          {
+            "node": "Ler log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler log": {
+      "main": [
+        [
+          {
+            "node": "Montar log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar log": {
+      "main": [
+        [
+          {
+            "node": "Gravar log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Editor-Chefe": {
+      "main": [
+        [
+          {
+            "node": "Classificar pasta (PARA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar pasta (PARA)": {
+      "main": [
+        [
+          {
+            "node": "Preparar arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "56f62678-aa1a-484e-8aaa-c4ab9d57f9db",
+  "meta": {
+    "instanceId": "071fdb82eeb8d72eb0dd144da56741339fbddca5d933ee5b39408950a247bff3"
+  },
+  "id": "1k0FoifGXbxtX6MD",
+  "tags": [
+    {
+      "updatedAt": "2026-08-01T04:19:35.684Z",
+      "createdAt": "2026-08-01T04:19:35.684Z",
+      "id": "IPpAbkpy2FMmqb59",
+      "name": "workshop-n8n"
+    }
+  ]
+}

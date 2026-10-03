@@ -1,0 +1,270 @@
+{
+  "name": "mindvault-search",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p1",
+              "name": "pergunta",
+              "type": "string",
+              "value": "={{ $json.chatInput || $json.pergunta }}"
+            },
+            {
+              "id": "q1",
+              "name": "qdrantUrl",
+              "type": "string",
+              "value": "http://qdrant:6333"
+            },
+            {
+              "id": "q2",
+              "name": "qdrantCollection",
+              "type": "string",
+              "value": "mindvault"
+            },
+            {
+              "id": "q3",
+              "name": "qdrantApiKey",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cfg",
+      "name": "Config + Pergunta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        304
+      ],
+      "notes": "Digite a pergunta em 'pergunta'. Cole a MESMA qdrantUrl e qdrantApiKey do Indexador."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'text-embedding-3-small', input: $json.pergunta }) }}",
+        "options": {}
+      },
+      "id": "emb",
+      "name": "Embedding da pergunta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        304
+      ],
+      "notes": "Transforma a pergunta em vetor (mesmo modelo do Indexador).",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config + Pergunta').item.json.qdrantUrl }}/collections/{{ $('Config + Pergunta').item.json.qdrantCollection }}/points/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{ $('Config + Pergunta').item.json.qdrantApiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ vector: $json.data[0].embedding, limit: 3, with_payload: true }) }}",
+        "options": {}
+      },
+      "id": "search",
+      "name": "Buscar no Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        304
+      ],
+      "notes": "RETRIEVAL: busca as 3 notas mais próximas no Qdrant, com payload (título, caminho, texto)."
+    },
+    {
+      "parameters": {
+        "jsCode": "const hits = $json.result || [];\nconst pergunta = $('Config + Pergunta').item.json.pergunta;\nconst contexto = hits.map((h, i) => `[Fonte ${i+1}] ${h.payload.titulo} (${h.payload.path})\\n${h.payload.texto || ''}`).join('\\n\\n---\\n\\n');\nconst system = `Você é o assistente do meu cofre de conhecimento. Responda à pergunta APENAS com base nas fontes fornecidas. Ao final, cite a(s) fonte(s) pelo título. Se as fontes não responderem, diga que não encontrou no vault. Escreva em português.`;\nconst user = `PERGUNTA: ${pergunta}\\n\\nFONTES:\\n${contexto}`;\nreturn [{ json: { system, user, encontradas: hits.length } }];"
+      },
+      "id": "prompt",
+      "name": "Montar prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        304
+      ],
+      "notes": "Monta o prompt com as fontes recuperadas (o contexto do RAG)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.2, messages: [ { role: 'system', content: $json.system }, { role: 'user', content: $json.user } ] }) }}",
+        "options": {}
+      },
+      "id": "answer",
+      "name": "Responder (LLM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        304
+      ],
+      "notes": "GENERATION: o LLM responde citando a nota de origem. Saída em choices[0].message.content.",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        16,
+        304
+      ],
+      "id": "c32e93cf-0bbd-49d9-bd0b-d99f5d857fd7",
+      "name": "When chat message received",
+      "webhookId": "51a37ec0-446f-4245-b50f-baf0c8ade659"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "output",
+              "type": "string",
+              "value": "={{ $json.choices[0].message.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1b5ae64e-2aff-4511-8bb7-fd9f0538fd37",
+      "name": "Resposta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        304
+      ],
+      "notes": "Extrai só o texto da resposta no campo 'output', que o Chat Trigger exibe como mensagem limpa."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Config + Pergunta": {
+      "main": [
+        [
+          {
+            "node": "Embedding da pergunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding da pergunta": {
+      "main": [
+        [
+          {
+            "node": "Buscar no Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar no Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Montar prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar prompt": {
+      "main": [
+        [
+          {
+            "node": "Responder (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Config + Pergunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b1b6e407-d50d-4768-afab-504fa560beec",
+  "meta": {
+    "instanceId": "071fdb82eeb8d72eb0dd144da56741339fbddca5d933ee5b39408950a247bff3"
+  },
+  "id": "OZkDsHmQtOCqqu8y",
+  "tags": []
+}

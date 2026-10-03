@@ -1,0 +1,351 @@
+{
+  "name": "mindvault-indexer",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Início (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        304
+      ],
+      "notes": "Na aula: manual. Em produção: Schedule (ex.: a cada 10 min) ou Webhook de push do GitHub."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "owner",
+              "type": "string",
+              "value": "yagosamu"
+            },
+            {
+              "id": "c2",
+              "name": "repo",
+              "type": "string",
+              "value": "second-brain-vault"
+            },
+            {
+              "id": "c3",
+              "name": "branch",
+              "type": "string",
+              "value": "main"
+            },
+            {
+              "id": "c4",
+              "name": "qdrantUrl",
+              "type": "string",
+              "value": "http://qdrant:6333"
+            },
+            {
+              "id": "c5",
+              "name": "qdrantCollection",
+              "type": "string",
+              "value": "mindvault"
+            },
+            {
+              "id": "c6",
+              "name": "qdrantApiKey",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        304
+      ],
+      "notes": "PREENCHER qdrantUrl e qdrantApiKey quando o Qdrant subir. Depois, mover a api-key para uma credencial."
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $('Config').item.json.owner }}/{{ $('Config').item.json.repo }}/git/trees/{{ $('Config').item.json.branch }}?recursive=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi"
+      },
+      "id": "list",
+      "name": "Listar árvore (GitHub)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        304
+      ],
+      "notes": "Lista todos os arquivos do repo (repo público = sem auth). Git Trees recursive.",
+      "credentials": {
+        "githubApi": {
+          "id": "6ENvYhUt2ydORGeK",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tree = $json.tree || [];\nconst pular = ['log.md', 'readme.md', 'claude.md', 'agents.md'];\nconst notas = tree.filter(t => t.type === 'blob' && t.path.toLowerCase().endsWith('.md') && !pular.includes(t.path.toLowerCase()));\nreturn notas.map(n => ({ json: { path: n.path, sha: n.sha } }));"
+      },
+      "id": "filter",
+      "name": "Filtrar .md",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        304
+      ],
+      "notes": "Fica só com os .md (ignora log.md e README.md). Um item por nota."
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $('Config').item.json.owner }}/{{ $('Config').item.json.repo }}/git/blobs/{{ $json.sha }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi"
+      },
+      "id": "blob",
+      "name": "Buscar conteúdo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        304
+      ],
+      "notes": "Baixa o conteúdo (base64) de cada nota pelo sha.",
+      "credentials": {
+        "githubApi": {
+          "id": "6ENvYhUt2ydORGeK",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decode base64 -> UTF-8 without Buffer. The Code-node sandbox's Buffer shim\n// returns latin1 for .toString('utf8'), which turns every accent and emoji into\n// mojibake (and strays into lone surrogates). TextDecoder is standards-based\n// and decodes correctly here.\nfunction b64ToUtf8(b64) {\n  const clean = String(b64 || '').replace(/\\s/g, '');\n  if (!clean) return '';\n  const bin = atob(clean);\n  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));\n  return new TextDecoder('utf-8').decode(bytes);\n}\n\n// Deterministic 128-bit hash in pure JS (cyrb128). Replaces require('crypto'),\n// which the sandbox blocks unless the host sets NODE_FUNCTION_ALLOW_BUILTIN —\n// an env var n8n cloud does not expose. Same contract as before: the id is a\n// function of the path, so re-indexing a note upserts instead of duplicating.\nfunction cyrb128(str) {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0, k; i < str.length; i++) {\n    k = str.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);\n  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);\n  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);\n  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);\n  return [(h1 ^ h2 ^ h3 ^ h4) >>> 0, (h2 ^ h1) >>> 0, (h3 ^ h1) >>> 0, (h4 ^ h1) >>> 0];\n}\n\nfunction uuidFromPath(path) {\n  const hex = cyrb128(path).map((n) => n.toString(16).padStart(8, '0')).join('');\n  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;\n}\n\nconst filtrados = $('Filtrar .md').all();\nconst items = $input.all();\n\nreturn items.map((it, i) => {\n  const md = b64ToUtf8(it.json.content);\n  // Everything before the callout is the distilled note; the raw transcript\n  // after it stays in the file but must not dominate the embedding.\n  const texto = md.split('> [!note]')[0].trim() || md;\n  const path = filtrados[i].json.path;\n  const m = texto.match(/^#\\s+(.+)$/m);\n  const titulo = (m ? m[1] : path).replace(/[#>\\[\\]]/g, '').trim();\n  return { json: { id: uuidFromPath(path), titulo, path, texto } };\n});\n"
+      },
+      "id": "prep",
+      "name": "Preparar texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        304
+      ],
+      "notes": "Decodifica, tira o transcript bruto, extrai título e gera um id UUID estável a partir do path (upsert idempotente)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'text-embedding-3-small', input: $json.texto }) }}",
+        "options": {}
+      },
+      "id": "embed",
+      "name": "Gerar embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1328,
+        304
+      ],
+      "notes": "Embedding da nota (text-embedding-3-small = 1536 dims).",
+      "credentials": {
+        "openAiApi": {
+          "id": "vorbqKL1lyqMm4vO",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const embItems = $input.all();\nconst meta = $('Preparar texto').all();\nconst points = embItems.map((it, i) => ({\n  id: meta[i].json.id,\n  vector: it.json.data[0].embedding,\n  payload: { titulo: meta[i].json.titulo, path: meta[i].json.path, texto: meta[i].json.texto }\n}));\nreturn [{ json: { points }, pairedItem: { item: 0 } }];"
+      },
+      "id": "points",
+      "name": "Montar points",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        304
+      ],
+      "notes": "Junta embeddings + metadados num array de points do Qdrant."
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Config').first().json.qdrantUrl }}/collections/{{ $('Config').first().json.qdrantCollection }}/points?wait=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{ $('Config').first().json.qdrantApiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ points: $json.points }) }}",
+        "options": {}
+      },
+      "id": "upsert",
+      "name": "Gravar no Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        304
+      ],
+      "notes": "Upsert dos pontos no Qdrant. Requer a collection criada uma vez (ver nota do projeto)."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Início (manual)": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Listar árvore (GitHub)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar árvore (GitHub)": {
+      "main": [
+        [
+          {
+            "node": "Filtrar .md",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar .md": {
+      "main": [
+        [
+          {
+            "node": "Buscar conteúdo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar conteúdo": {
+      "main": [
+        [
+          {
+            "node": "Preparar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar texto": {
+      "main": [
+        [
+          {
+            "node": "Gerar embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar embedding": {
+      "main": [
+        [
+          {
+            "node": "Montar points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar points": {
+      "main": [
+        [
+          {
+            "node": "Gravar no Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "153b59c9-a98f-4147-b76e-c2580b4f70a0",
+  "meta": {
+    "instanceId": "071fdb82eeb8d72eb0dd144da56741339fbddca5d933ee5b39408950a247bff3"
+  },
+  "id": "0e0ONOsmoPl8I2Iy",
+  "tags": []
+}
