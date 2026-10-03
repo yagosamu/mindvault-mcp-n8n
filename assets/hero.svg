@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 640" width="1600" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#07090f"/>
+      <stop offset="100%" stop-color="#0c0a17"/>
+    </linearGradient>
+    <linearGradient id="bandA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1e2a4d" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#241f4d" stop-opacity="0.38"/>
+    </linearGradient>
+    <linearGradient id="bandB" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0d3322" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#113d28" stop-opacity="0.4"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="aCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/></marker>
+    <marker id="aViolet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#a78bfa"/></marker>
+    <marker id="aAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#eab308"/></marker>
+    <marker id="aBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b82f6"/></marker>
+    <marker id="aGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22c55e"/></marker>
+    <marker id="aTick" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5675"/></marker>
+  </defs>
+
+  <rect width="1600" height="640" fill="url(#bg)"/>
+
+  <!-- headline -->
+  <text x="46" y="70" font-family="Georgia, 'Times New Roman', serif" font-size="45" fill="#f2f4f8">
+    Capture once. <tspan fill="#eab308">Keep it in Git.</tspan>
+  </text>
+  <text x="46" y="124" font-family="Georgia, 'Times New Roman', serif" font-size="45" fill="#4ade80">
+    Ask it from your editor.
+  </text>
+  <text x="46" y="161" font-family="Georgia, 'Times New Roman', serif" font-size="15" fill="#8b93a7">
+    Left to right: a transcript is distilled by five agents, filed by the PARA classifier, committed to a Git vault, embedded into Qdrant,
+  </text>
+  <text x="46" y="183" font-family="Georgia, 'Times New Roman', serif" font-size="15" fill="#8b93a7">
+    and served over MCP. The vault is the source of truth; the index is disposable and rebuilt from it on demand.
+  </text>
+
+  <!-- bands -->
+  <rect x="50" y="214" width="986" height="78" rx="14" fill="url(#bandA)" stroke="#5b6cb8" stroke-width="1.3"/>
+  <text x="72" y="240" font-family="'Consolas', 'SF Mono', monospace" font-size="10" fill="#aab8f0" letter-spacing="1.5">N8N · SELF-HOSTED · INGEST + INDEX</text>
+  <text x="543" y="272" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#e9ecf5">Visual pipeline — 3 workflows, 31 nodes</text>
+
+  <rect x="1082" y="214" width="468" height="78" rx="14" fill="url(#bandB)" stroke="#2f8f5b" stroke-width="1.3"/>
+  <text x="1104" y="240" font-family="'Consolas', 'SF Mono', monospace" font-size="10" fill="#8ee6b0" letter-spacing="1.5">PYTHON · MCP SERVER</text>
+  <text x="1316" y="272" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#e9ecf5">Typed tools — 17 tests</text>
+
+  <!-- stage chips -->
+  <g font-family="'Consolas', 'SF Mono', monospace" font-size="10" letter-spacing="1.2" text-anchor="middle">
+    <rect x="86"   y="332" width="138" height="21" rx="5" fill="#0d2b30" stroke="#155e63"/><text x="155"  y="347" fill="#67e8f9">00 · CAPTURE</text>
+    <rect x="344"  y="332" width="138" height="21" rx="5" fill="#231b40" stroke="#4c3d7a"/><text x="413"  y="347" fill="#c4b5fd">01 · DISTILL</text>
+    <rect x="602"  y="332" width="138" height="21" rx="5" fill="#2b230b" stroke="#6b5312"/><text x="671"  y="347" fill="#fcd34d">02 · VAULT</text>
+    <rect x="860"  y="332" width="138" height="21" rx="5" fill="#0f1f3d" stroke="#1e3a72"/><text x="929"  y="347" fill="#93c5fd">03 · INDEX</text>
+    <rect x="1118" y="332" width="138" height="21" rx="5" fill="#0c2716" stroke="#166534"/><text x="1187" y="347" fill="#86efac">04 · SERVE</text>
+  </g>
+
+  <g stroke="#4b5675" stroke-width="1.1" stroke-dasharray="3 4" marker-end="url(#aTick)">
+    <path d="M155 355 V 383"/><path d="M413 355 V 383"/><path d="M671 355 V 383"/>
+    <path d="M929 355 V 383"/><path d="M1187 355 V 383"/>
+  </g>
+
+  <!-- 00 transcript -->
+  <rect x="50" y="390" width="210" height="150" rx="13" fill="#08171b" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="66" y="416" font-family="'Consolas', 'SF Mono', monospace" font-size="9" fill="#22d3ee" letter-spacing="1.1">RAW INPUT</text>
+  <text x="155" y="462" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" fill="#f2f4f8">Transcript</text>
+  <text x="155" y="492" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">a meeting, an idea,</text>
+  <text x="155" y="509" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">a half-formed thought</text>
+
+  <!-- 01 agents -->
+  <rect x="308" y="390" width="210" height="150" rx="13" fill="#100c1f" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="324" y="416" font-family="'Consolas', 'SF Mono', monospace" font-size="9" fill="#c4b5fd" letter-spacing="1.1">FAN-OUT · FAN-IN</text>
+  <text x="413" y="455" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" fill="#f2f4f8">Five Agents</text>
+  <text x="413" y="483" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">summary · actions</text>
+  <text x="413" y="500" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">decisions · tags</text>
+  <text x="413" y="519" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">then one editor</text>
+
+  <!-- 02 vault -->
+  <rect x="566" y="390" width="210" height="150" rx="13" fill="#191305" stroke="#eab308" stroke-width="1.5"/>
+  <text x="582" y="416" font-family="'Consolas', 'SF Mono', monospace" font-size="9" fill="#eab308" letter-spacing="1.1">SOURCE OF TRUTH</text>
+  <text x="671" y="455" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" fill="#f2f4f8">Git Vault</text>
+  <text x="671" y="483" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">PARA · Obsidian</text>
+  <text x="671" y="500" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">plain markdown,</text>
+  <text x="671" y="517" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">versioned</text>
+
+  <!-- 03 qdrant -->
+  <rect x="824" y="390" width="210" height="150" rx="13" fill="#080e1c" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="840" y="416" font-family="'Consolas', 'SF Mono', monospace" font-size="9" fill="#60a5fa" letter-spacing="1.1">DISPOSABLE</text>
+  <text x="929" y="455" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" fill="#f2f4f8">Qdrant</text>
+  <text x="929" y="483" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">1536 dims · cosine</text>
+  <text x="929" y="500" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">id derived from path,</text>
+  <text x="929" y="517" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">so upserts are idempotent</text>
+
+  <!-- 04 mcp -->
+  <g filter="url(#glow)">
+    <rect x="1082" y="390" width="210" height="150" rx="13" fill="#06170d" stroke="#22c55e" stroke-width="1.6"/>
+  </g>
+  <text x="1098" y="416" font-family="'Consolas', 'SF Mono', monospace" font-size="9" fill="#4ade80" letter-spacing="1.1">STDIO · TYPED</text>
+  <text x="1187" y="455" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" fill="#f2f4f8">MCP Server</text>
+  <text x="1187" y="483" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">search · get · list</text>
+  <text x="1187" y="500" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">+ note:// resource</text>
+  <text x="1187" y="519" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">with a similarity floor</text>
+
+  <!-- consumer -->
+  <rect x="1340" y="406" width="210" height="118" rx="13" fill="#080d18" stroke="#3b82f6" stroke-width="1.3" stroke-dasharray="6 5" opacity="0.9"/>
+  <text x="1445" y="432" text-anchor="middle" font-family="'Consolas', 'SF Mono', monospace" font-size="9" fill="#60a5fa" letter-spacing="1.1">MCP HOST</text>
+  <text x="1445" y="470" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#cdd4e2">Claude Code</text>
+  <text x="1445" y="496" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-style="italic" fill="#7b8496">ask in plain language</text>
+
+  <!-- flow -->
+  <path d="M266 465 H 298" stroke="#22d3ee" stroke-width="2.2" marker-end="url(#aCyan)"/>
+  <path d="M524 465 H 556" stroke="#a78bfa" stroke-width="2.2" marker-end="url(#aViolet)"/>
+  <path d="M782 465 H 814" stroke="#eab308" stroke-width="2.2" marker-end="url(#aAmber)"/>
+  <path d="M1040 465 H 1072" stroke="#3b82f6" stroke-width="2.2" marker-end="url(#aBlue)"/>
+  <path d="M1298 465 H 1330" stroke="#22c55e" stroke-width="2.2" marker-end="url(#aGreen)"/>
+
+  <!-- rebuild loop: the index is derived, never authoritative -->
+  <path d="M671 540 V 566 Q 671 576 683 576 H 917 Q 929 576 929 566 V 546"
+        fill="none" stroke="#eab308" stroke-width="1.2" stroke-dasharray="4 5" opacity="0.7" marker-end="url(#aAmber)"/>
+  <rect x="712" y="566" width="176" height="21" rx="5" fill="#0c0a17" stroke="#6b5312"/>
+  <text x="800" y="581" text-anchor="middle" font-family="'Consolas', 'SF Mono', monospace" font-size="10" fill="#fcd34d" letter-spacing="0.5">re-indexable at any time</text>
+
+  <text x="1550" y="581" text-anchor="end" font-family="'Consolas', 'SF Mono', monospace" font-size="11" fill="#6b7488">docker compose up · one command</text>
+</svg>
