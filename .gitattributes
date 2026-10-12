@@ -1,0 +1,15 @@
+# Pin LF in the repository AND in the working tree, for two concrete reasons.
+#
+# 1. The Makefile and scripts/*.sh run inside the Linux container. A CRLF
+#    checkout makes the kernel read the shebang as "/bin/bash\r" and fail with
+#    "bad interpreter: No such file or directory" — an error that names the
+#    interpreter, never the line ending.
+#
+# 2. workflows/*.json carries the indexer's jsCode, which measures chunk length
+#    in characters. A CRLF blob is one byte per line longer than the LF blob the
+#    GitHub API serves, which is enough to move a note across the 1500-char
+#    boundary and silently change the index.
+#
+# `text=auto` keeps binary detection, so an image added later is left alone
+# without editing this file.
+* text=auto eol=lf
